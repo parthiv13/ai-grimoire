@@ -1,24 +1,15 @@
 ---
 name: implement
 description: >
-  Feature implementation orchestrator. Six-phase workflow: business logic
-  discovery → scenario generation → planning → implementation → code review →
-  commit. Invoke with /implement followed by a problem statement or document.
-argument-hint: "<problem statement or paste document>"
+   Plan a new feature, get to a shared understanding, and implement via parallel sub-agents.
+disable-model-invocation: true
+metadata:
+  argument-hint: "<problem statement or paste document>"
+allowed-tools: Read Write Edit Glob Grep Bash Task
 ---
 
-<objective>
-Guide the user through a structured implementation workflow in six phases:
-
-1. **Discover** — understand business intent via relentless questioning (no coding yet)
-2. **Scenarios** — enumerate test scenarios, get approval, persist to SCENARIO.md
-3. **Plan** — create branch, produce concise plan.md with file manifest and todos
-4. **Implement** — generate tests first, then src; parallelize independent steps via agents
-5. **Review** — user-driven review; detect plan drift before applying any changes
-6. **Commit** — generate commit message, push branch
-
-Orchestrator runs inline (main context). Heavy sub-tasks delegate to agents.
-</objective>
+On resume, state current phase: "We're in Phase N — {last action}."
+Work through phases in order; do not skip ahead without user confirmation.
 
 ---
 
@@ -26,40 +17,26 @@ Orchestrator runs inline (main context). Heavy sub-tasks delegate to agents.
 
 **Goal:** Shared understanding of WHAT, not HOW.
 
-Read the problem statement or document the user provided in `$ARGUMENTS`.
+Interview the user — one question at a time — until every branch of the business logic is resolved:
 
-Conduct a relentless Socratic interview — one question at a time — until every
-branch of the business logic tree is resolved:
+- Offer your recommended answer for each question; accept the user's answer before moving on
+- Cover: decision branches, edge cases, error states, boundary conditions
+- Focus exclusively on business logic, user intent, and domain rules — redirect implementation questions: "We'll cover that in Phase 4."
 
-- Walk each decision branch to its leaf
-- For each question, offer your recommended answer
-- Accept the user's answer before moving on
-- Probe edge cases, exceptions, error states, boundary conditions
-- Do NOT discuss implementation, frameworks, classes, or code structure
-- Do NOT discuss testing strategy yet
-- Redirect any implementation tangents: "We'll get to that in Phase 3."
-
-When confident you understand the full business intent, summarize it back in plain
-language. Ask: "Is this a complete picture of the business logic? Anything missing?"
-
-Persist the business logic summary in memory — needed in Phase 2.
-
-**Model:** Run Phase 1 inline. Sonnet-class required for nuanced questioning.
+When complete, summarize the business logic in plain language. Ask: "Is this a complete picture? Anything missing?"
 
 ---
 
 ## Phase 2 — Test Scenario Generation
 
-**Goal:** Enumerate all meaningful test scenarios. No code yet.
-
-Using business logic from Phase 1, identify and list all test scenarios grouped by:
+Using Phase 1 output, list all scenarios grouped by:
 
 - **Happy path** — normal successful flows
 - **Edge cases** — boundary values, empty inputs, limits
 - **Error / failure cases** — invalid input, missing data, system failures
 - **Business rule violations** — constraint breaches, illegal state transitions
 
-For each scenario:
+Format each scenario:
 
 ```
 ### S-{N}: {Short title}
@@ -69,20 +46,14 @@ For each scenario:
 **Category:** happy-path | edge-case | error | business-rule
 ```
 
-Present all scenarios to the user. Ask:
-
-> "Does this cover all scenarios? Anything missing or incorrect?"
-
-Incorporate all feedback. Loop until user approves.
+Present all scenarios. Ask: "Does this cover everything? Anything missing or incorrect?"
+Incorporate feedback and loop until approved.
 
 Once approved:
 
-1. Derive folder name from problem statement: 3–6 words, camelCase
-   (e.g., `hotelRoomPriceCalculation`, `guestCheckInFlow`)
+1. Derive folder name from problem statement: 3–6 words, camelCase (e.g. `hotelRoomPriceCalculation`)
 2. Create `planning/{folderName}/` if missing
-3. Write approved scenarios to `planning/{folderName}/SCENARIO.md`
-
-**SCENARIO.md format:**
+3. Write to `planning/{folderName}/SCENARIO.md`:
 
 ```markdown
 # Test Scenarios: {Human-readable title}
@@ -90,50 +61,21 @@ Once approved:
 > Generated from: {one-line problem summary}
 
 ## Happy Path
-
 ...
-
 ## Edge Cases
-
 ...
-
 ## Error / Failure Cases
-
 ...
-
 ## Business Rule Violations
-
 ...
 
 ---
-
 _Total scenarios: N_
 ```
-
-Announce: "Scenarios saved. Moving to Phase 3 — planning."
 
 ---
 
 ## Phase 3 — Planning
-
-**Goal:** Create a branch and a concise, executable plan.
-
-### Branch
-
-Ask the user: "What should the branch name be?"
-Suggest one based on folder name (e.g., `feature/hotel-room-price-calculation`).
-
-Once confirmed:
-
-```bash
-git checkout -b {branch-name}
-```
-
-If branch already exists: "Branch `{name}` already exists. Use it, or pick a different name?"
-
-### Plan
-
-Read `copilot-instructions.md` (root level) for project conventions before planning.
 
 Create `planning/{folderName}/plan.md`:
 
@@ -141,189 +83,96 @@ Create `planning/{folderName}/plan.md`:
 # Plan: {title}
 
 ## Goal
-
 {One sentence}
 
 ## Approach
-
-{2–3 sentences max}
+{2–3 sentences}
 
 ## File Manifest
 
 | Action | File path | Notes |
 | ------ | --------- | ----- |
 | CREATE | ...       | ...   |
-| UPDATE | ...       | ...   |
-| DELETE | ...       | ...   |
 
 ## Steps
 
 ### Step 1 — {title}
-
 **Depends on:** none | Step N
 **Parallelizable:** yes | no
 **Scenarios covered:** S-1, S-2
 **Files:** list
 **Tasks:**
-
-- [ ] Write failing tests for S-1, S-2
-- [ ] Implement src to make tests pass
-
-### Step 2 — ...
+- [ ] Draft scenario-aligned tests and src for S-1, S-2 (single pass allowed)
+- [ ] Iterate until targeted tests pass without weakening assertions
 ```
 
-Rules:
+Rules: each step = one cohesive test + implementation unit; mark dependencies explicitly; steps with no dependencies are parallelizable (same wave).
 
-- Each step = one cohesive unit of test + implementation
-- Mark dependencies explicitly
-- Steps with no dependencies = parallelizable (same wave)
-- Keep steps small (1–3 scenarios each ideally)
-
-Present plan. Ask: "Does this look right? Any changes?"
-Incorporate feedback and finalize before proceeding.
+Present plan. Ask: "Does this look right? Any changes?" Finalize before proceeding.
 
 ---
 
 ## Phase 4 — Implementation
 
-**Goal:** Tests first, then make them pass.
-
 Parse steps from `plan.md`. Build dependency graph. Group into waves:
 
-- Wave 1 = all steps with `Depends on: none`
+- Wave 1 = steps with `Depends on: none`
 - Wave N = steps whose dependencies are all complete
 
-**For each wave:**
+**Per wave:** spawn one `coder` agent per step in parallel.
+Construct each agent's prompt from `references/coder-prompt.md`, substituting the step block, scenario IDs, files, and folder name from `plan.md`.
 
-- Spawn one `tdd-implementer` agent per step (in parallel via Task tool)
-- Pass each agent: step details, path to SCENARIO.md, path to plan.md, folderName
-- Wait for all agents in wave to complete before starting next wave
+Wait for all agents in a wave before starting the next.
 
-**After each wave (fast feedback loop):**
+**After each wave — extract results:**
 
-Derive the Gradle module path from the file paths in `plan.md` (e.g. a file under
-`g2-casper/g2-casper-ip/src/...` → module `:g2-casper:g2-casper-ip`). Do not assume a module.
+From each agent response, extract:
+- `Status` (`pass | fail | blocked`)
+- `Test classes (FQCNs)`
+- `Files created`
+- `Files updated`
 
-Run only the test classes written in that wave using the targeted test command:
+If any step is `blocked`, surface blockers and ask the user how to proceed before running tests.
 
-```bash
-./gradlew :<derived-module>:test --tests "<fully.qualified.TestClassName>"
-```
+**Targeted test run:**
 
-Collect all test class FQCNs from the wave's implementer agents and pass them as separate `--tests` flags:
+Use the IntelliJ MCP server to run only the tests written in this wave.
 
-```bash
-./gradlew :<derived-module>:test \
-  --tests "<fully.qualified.TestClassName1>" \
-  --tests "<fully.qualified.TestClassName2>"
-```
+- Coder reported `blocked` → surface blockers, ask user how to proceed (skip test run)
+- Coder reported `fail` → show summary, ask: "Fix automatically or review manually?" (skip test run)
+- Coder reported `pass` but IntelliJ tests fail → show errors, ask: "Fix automatically or review manually?"
+- All pass → start next wave
 
-If steps span multiple modules, group by module and run one command per module.
-Gradle's `test` task implicitly compiles the module before running — **no separate build step needed**.
-This mirrors running tests in IntelliJ and completes in seconds, not minutes.
+**After all waves — scoped regression check:**
 
-- Tests fail → show errors, ask: "Fix automatically or review manually?"
-- All wave tests pass → start next wave
+Using the IntelliJ MCP server, run tests scoped to the packages/modules touched by this plan's file manifest.
 
-**After all waves complete (scoped regression check):**
-
-Do NOT run the full test suite — derive the affected module(s) and package scope from `plan.md`'s
-file manifest. Collect the unique top-level packages of every file touched and build a `--tests`
-pattern per package. Group by module:
-
-```bash
-./gradlew :<derived-module>:test --parallel \
-  --tests "<fully.qualified.package1>.*" \
-  --tests "<fully.qualified.package2>.*"
-```
-
-If files span multiple modules, run one command per module.
-
-`--parallel` runs test classes concurrently (safe because unit tests have no shared state).
-This catches regressions within the affected domain without paying the cost of the full suite.
-
-- Tests fail → show errors, ask: "Fix automatically or review manually?"
-- Tests pass → "Implementation complete. Moving to Phase 5 — review."
-
-> **Note:** Full `./gradlew :g2-casper:g2-casper-ip:build` is intentionally deferred to Phase 6
-> pre-commit, when the user is satisfied with the code. No point running it during active iteration.
+- Failures → show errors, ask: "Fix automatically or review manually?"
+- Pass → "Implementation complete. Moving to Phase 5."
 
 ---
 
 ## Phase 5 — Code Review
 
-**Goal:** User reviews. You assist — but guard against plan drift.
-
 Tell the user:
+> "Code is ready for review. Tell me what to change, edit files directly, or let me know when you're satisfied and I'll output the final summary."
 
-> "Code is ready for your review. You can:
->
-> - Tell me what to change and I'll implement it
-> - Edit files directly yourself
-> - Say 'review done' when finished to move to Phase 6"
+**On requested change:**
+1. Compare against `plan.md`
+2. Consistent → implement directly
+3. Deviates → surface: "This differs from the plan. Plan says: `{X}`. You're asking for: `{Y}`. Intentional?"
+   - Yes → update `plan.md` first, then implement
+   - No → ask: "Should I implement as originally planned?"
 
-**When user asks you to make a change:**
+**On direct user edits:** silently run `git diff` against the file manifest. If unexpected changes found, surface once: 
+"I notice `{file}` changed outside the plan — flagging in case it was accidental."
 
-1. Compare requested change against `plan.md` before touching code
-2. Change is **consistent with plan** → implement directly
-3. Change **deviates from plan** (new behaviour, removed feature, structural shift):
-   - Do NOT implement yet
-   - Surface: "This differs from the plan. Plan says: `{X}`. You're asking for: `{Y}`. Intentional?"
-   - User says **yes** → update `plan.md` first, then implement
-   - User says **no** → ask: "Should I implement as originally planned instead?"
+**When review is complete:**
 
-**When user edits files directly:**
+Output a final summary:
+> **Workflow complete.**
+> - Scenarios: N total
+> - Files: M created/updated
+> - All tests passing ✓
 
-- Do not interfere
-- On next interaction, silently run `git diff` against plan's file manifest
-- If unexpected changes detected, surface once: "I notice `{file}` changed outside the plan — flagging in case it was accidental."
 
----
-
-## Phase 6 — Commit and Push
-
-Ask: "Ready to commit and push?"
-
-If yes:
-
-1. Ask the user: "Should I run the full build before committing? This compiles everything, runs all tests, and checks the module — recommended but takes a few minutes."
-   - User says **yes** → run one build command per module derived from `plan.md`'s file manifest:
-
-     ```bash
-     ./gradlew :<derived-module>:build
-     ```
-
-     - Build fails → show errors, fix before proceeding
-     - Build passes → continue
-
-   - User says **no** → skip and proceed to the commit step
-
-2. Show `git diff --stat` summary
-3. Generate commit message:
-
-   ```
-   {type}({scope}): {short summary}
-
-   - {bullet: what changed}
-   - {bullet: what changed}
-
-   Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-   ```
-
-4. Ask: "Any changes to this commit message?"
-5. Once confirmed:
-   ```bash
-   git add -A
-   git commit -m "{message}"
-   git push -u origin {branch-name}
-   ```
-6. Confirm push. Print branch URL if available.
-
----
-
-## General Rules
-
-- Track current phase. On resume: "We're in Phase N — {last action}."
-- One phase at a time. Do not skip ahead without user confirmation.
-- Never write code in Phase 1 or Phase 2.
-- `plan.md` is the source of truth for Phase 5 drift detection.
