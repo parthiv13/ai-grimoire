@@ -114,6 +114,8 @@ Present plan. Ask: "Does this look right? Any changes?" Finalize before proceedi
 
 ## Phase 4 — Implementation
 
+**Testing policy:** All tests—including targeted tests, regression checks, and tests run by coder agents—must be executed through the IntelliJ MCP server only. Never invoke a test runner through the terminal (for example via Bash, Gradle, Maven, npm, or similar). If the IntelliJ MCP server is unavailable, stop and ask the user how to proceed rather than running tests another way.
+
 Parse steps from `plan.md`. Build dependency graph. Group into waves:
 
 - Wave 1 = steps with `Depends on: none`
@@ -136,7 +138,7 @@ If any step is `blocked`, surface blockers and ask the user how to proceed befor
 
 **Targeted test run:**
 
-Use the IntelliJ MCP server to run only the tests written in this wave.
+Use only the IntelliJ MCP server to run the tests written in this wave. Do not run them through the terminal.
 
 - Coder reported `blocked` → surface blockers, ask user how to proceed (skip test run)
 - Coder reported `fail` → show summary, ask: "Fix automatically or review manually?" (skip test run)
