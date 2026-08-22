@@ -17,6 +17,7 @@ Create well-structured skills using progressive disclosure, leading words, posit
 - **Progressive reveal**: Keep the core workflow here; link detailed references.
 - **Architect mindset**: Assess purpose, invocation, risks, simpler alternatives, and failure modes first.
 - **Completion criteria**: End each step with an observable check.
+- **IDE preference**: When the IntelliJ MCP server is available, prefer it over terminal commands for IDE actions, code navigation, inspections, and test execution. Use terminal commands only when the MCP server does not support the required operation.
 
 ### Workflow
 
