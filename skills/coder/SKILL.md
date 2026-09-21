@@ -21,26 +21,39 @@ Read only the minimum needed:
 
 ### Step 1 — Understand scope
 
-Parse your assigned step block (passed in your prompt):
-- Which scenarios (S-N) does this step cover?
+Parse the assigned step block (passed in your prompt):
+- Which scenarios or existing behavior does this step cover?
 - Which files must be created or updated?
-- What are the task bullets?
+- What are the task bullets and behavior constraints?
 
-Read only the assigned scenario IDs from the scenario file referenced by the orchestrator (typically `SCENARIO.md`). For each assigned scenario, extract the Given/When/Then contract.
+If the step includes scenario IDs and a `SCENARIO.md` path, read only those
+assigned scenarios. If it describes an existing target, diagnosis, behavior to
+preserve, and refactor scope, read the named target and existing tests. In both
+cases, treat the step block as the source of truth.
 
-### Step 2 — Build first pass (tests + src)
+### Step 2 — Build the assigned change
 
-For each scenario assigned to this step:
-- Write unit tests that capture the Given/When/Then contract
-- Implement src to satisfy those tests (single pass is allowed)
-- Use descriptive test method names that reflect the scenario title
-- One test class per production class under test (follow project conventions)
+For a scenario-based step:
+- Write unit tests that capture the Given/When/Then contract.
+- Implement src to satisfy those tests.
+- Use descriptive test method names that reflect the scenario title.
+- Keep one test class per production class under test.
+
+For a refactor step:
+- Preserve the behavior and scope stated in the step block.
+- Write missing tests first when requested, or update tests alongside the
+  refactor when that sequencing was approved.
+- Refactor only the named files and symbols.
+- Keep behavior-sensitive assertions, including edge and failure paths.
 
 ### Step 3 — Refine until stable
 
 Refine code and tests until behavior is correct and tests pass:
-- Implement exactly what assigned scenarios demand
-- Clean up naming/duplication when it improves clarity without broadening scope
+- Implement exactly what the assigned step demands.
+- Clean up naming or duplication only when it improves clarity without
+  broadening scope.
+- Report any required file or behavior outside the assigned scope before
+  touching it.
 - Use `references/coding-rules.md` defaults only if loaded for this step
 
 ### Step 4 — Report
