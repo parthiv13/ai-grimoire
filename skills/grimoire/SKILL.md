@@ -46,6 +46,7 @@ following is the current routing map:
 | `tests` | Design and write meaningful tests for existing code or recent changes, with deliberate scenario approval and test-focused validation. |
 | `implement` | Plan and implement a new feature or a substantial multi-file change through business-logic discovery, scenarios, planning, and implementation. |
 | `coder` | Implement exactly one already-defined, clearly scoped step from an existing coding plan. It is normally invoked by an orchestrating workflow rather than chosen for open-ended requests. |
+| `refactor` | Reduce concrete complexity or duplication in existing code while preserving behavior and verifying a focused change. |
 | `what-if-we` | Explore an unfamiliar topic, compare approaches, clarify goals, or make a conditional recommendation before committing to a solution. |
 | `skill-creator` | Design or create a new skill, or revise an existing skill's structure and behavior. |
 | `grimoire` | Decide which skill to use or understand how the skills differ. |
@@ -68,6 +69,9 @@ following is the current routing map:
   and require an explicit implementation gate before edits. Do not recommend
   `implement` merely because the user eventually wants a fix; first determine
   whether the immediate need is diagnosis or a new feature.
+- **Cleanup versus new behavior:** If the user wants existing behavior made
+  simpler, cleaner, or less duplicated, recommend `refactor`. If the user wants
+  new product behavior, recommend `implement`.
 
 ## Mode 1 — No Scenario Supplied
 
